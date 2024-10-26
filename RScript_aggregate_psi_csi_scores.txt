@@ -1,0 +1,141 @@
+#---- generating PSI and CSI scores for countries around the world
+rm(list = ls())
+pkgs = c('raster', 'maptools', 'rworldmap')
+lapply(pkgs, require, character.only = T)
+
+path = 'd:/postdoctoral/FAPESP_pasture/yg_manuscript'
+
+r_psi = raster(paste0(path, '/shapefiles/PSI.tif'))
+r_psi[r_psi<0]<- NA
+
+r_psi_agg = r_psi
+# legend for aggregate psi classes
+# 1 - low; 2 - mid; 3 - high
+
+# -- aggregation step
+values(r_psi_agg) = ifelse(values(r_psi_agg) <= 1, 1, ifelse(
+                           values(r_psi_agg) <= 4, 2, 3))
+
+r_cereals = raster(paste0(path, '/shapefiles/CSI_cereals.tif'))
+values(r_cereals) = round(values(r_cereals), 0)
+# legend for aggregate cereals 
+# 1 - high ; 2 - mid; 3 - low; -99 - not suitable
+r_cereals_agg = r_cereals
+
+# aggregation step
+values(r_cereals_agg) =  ifelse(values(r_cereals_agg)<=2, 3, ifelse(
+                values(r_cereals_agg) <= 5, 2, ifelse(
+                  values(r_cereals_agg)<= 7, 1, -99)))
+
+r_fpasture = raster(paste0(path, '/shapefiles/fpasture_occ_signif_resample.tif'))
+r_psi_agg[is.na(r_fpasture)]<- NA
+r_cereals_agg[is.na(r_fpasture)]<- NA
+
+map = getMap(resolution = 'low')
+m1 = map@data; head(m1)
+
+#here you can decide which land cathegory you want use
+
+to_aggregate = paste(unique(m1$GEO3))
+countries = to_aggregate[-c(1, 10, 22)]
+
+A1 = matrix(NA, ncol = 11, nrow = length(countries))
+colnames(A1) = c('Region name', '%PSI-low', '%PSI-mid', '%PSI-high',
+                 '%CSI-low', '%CSI-mid', '%CSI-high', 'avg_PSI', 'median_PSI',
+                 'avg_CSI', 'median_CSI')
+A1[,1] = countries
+
+#---- generating PSI and CSI scores for countries around the world
+rm(list = ls())
+pkgs = c('raster', 'maptools', 'rworldmap')
+lapply(pkgs, require, character.only = T)
+
+path = 'd:/postdoctoral/FAPESP_pasture/yg_manuscript'
+
+r_psi = raster(paste0(path, '/shapefiles/PSI.tif'))
+r_psi[r_psi<0]<- NA
+
+r_psi_agg = r_psi
+# legend for aggregate psi classes
+# 1 - low; 2 - mid; 3 - high
+values(r_psi_agg) = ifelse(values(r_psi_agg) <= 1, 1, ifelse(
+                           values(r_psi_agg) <= 4, 2, 3))
+
+r_cereals = raster(paste0(path, '/shapefiles/CSI_cereals.tif'))
+values(r_cereals) = round(values(r_cereals), 0)
+# legend for aggregate cereals 
+# 1 - high ; 2 - mid; 3 - low; 
+r_cereals_agg = r_cereals
+table(values(r_cereals_agg))
+
+values(r_cereals_agg) =  ifelse(values(r_cereals_agg)<=2, 3, ifelse(
+                values(r_cereals_agg) <= 5, 2, ifelse(
+                  values(r_cereals_agg)<= 7, 1, NA)))
+plot(r_cereals_agg)
+r_fpasture = raster(paste0(path, '/shapefiles/fpasture_occ_signif_resample.tif'))
+r_psi_agg[is.na(r_fpasture)]<- NA
+r_cereals_agg[is.na(r_fpasture)]<- NA
+
+# getting countries / regions
+map = getMap(resolution = 'low')
+m1 = map@data
+
+#here you can decide which land cathegory you want use
+
+to_aggregate = paste(unique(m1$GEO3))
+countries = to_aggregate[-c(1, 10,12, 22)]
+
+A1 = matrix(NA, ncol = 11, nrow = length(countries))
+colnames(A1) = c('Region name', '%PSI-low', '%PSI-mid', '%PSI-high',
+                 '%CSI-low', '%CSI-mid', '%CSI-high', 'avg_PSI', 'median_PSI',
+                 'avg_CSI', 'median_CSI')
+A1[,1] = countries
+t = 1
+for(i in countries){
+
+  sel_ctr = map[which(map@data$GEO3 == i),]
+  plot(sel_ctr, col = 'gray50'); world(add=T)
+  sel1_psi = mask(r_psi_agg, sel_ctr)
+  sel2_psi = crop(sel1_psi, sel_ctr)
+  plot(sel2_psi)
+  world(add=T)
+  sel1_cereal = mask(r_cereals_agg, sel_ctr)
+  sel2_cereal = crop(sel1_cereal, sel_ctr)
+  
+  #plot(sel2_cereal, main = paste(A1[i,1]))
+  #plot(sel2_psi)
+  #world(add=T)
+  total_psi = as.vector(table(values(sel2_psi)))
+  total_csi = as.vector(table(values(sel2_cereal)))
+  average_psi = round(mean(values(sel2_psi), na.rm = T),0)
+  median_psi = round(median(values(sel2_psi), na.rm = T), 0)    
+  average_csi = round(mean(values(sel2_cereal), na.rm = T),0)
+  median_csi = round(median(values(sel2_cereal), na.rm = T), 0)		
+  
+  A1[t,2] = round(total_psi[1]*100 / sum(total_psi),2)     
+  A1[t,3] = round(total_psi[2]*100 / sum(total_psi),2)     
+  A1[t,4] = round(total_psi[3]*100 / sum(total_psi),2)     
+  A1[t,5] = round(total_csi[1]*100 / sum(total_csi),2)     
+  A1[t,6] = round(total_csi[2]*100 / sum(total_csi),2)     
+  A1[t,7] = round(total_csi[3]*100 / sum(total_csi),2)     
+  A1[t,8] = average_psi
+  A1[t,9] = median_psi
+  A1[t,10] = average_csi
+  A1[t,11] = median_csi
+  print(A1[1:t,])
+  t = t+1
+}
+
+    write.csv(A1, paste0(path, '/tables/aggregate_psi_cereal_scores.csv'))
+    
+    
+    #total_gridcells = length(!is.na(values(sel2)))
+    average_psi = mean(values(sel2), na.rm = T)
+    median_psi = median(values(sel2), na.rm = T)
+    
+    A1[i,2] = round(average_psi,0)
+    A1[i,3] = median_psi
+  }
+}
+    write.csv(A1, paste0(path, '/tables/aggregate_psi_cereal_scores.csv'))
+    
